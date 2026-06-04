@@ -1,0 +1,6 @@
+{
+  "name": "Barber Classic 76 Studio",
+  "description": "Página web premium para Barber Classic 76 Studio en Garzón, Huila, Colombia. Agenda tu cita y vive la experiencia clásica de barbería con atención de alta calidad, higiene impecable y estilo profesional.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
