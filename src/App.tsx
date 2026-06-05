@@ -32,11 +32,16 @@ import {
   Trash2,
   Plus,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  Settings,
+  Share2,
+  Instagram,
+  Facebook,
+  Youtube
 } from 'lucide-react';
 
 import { CONTACT_INFO, SERVICES, REVIEWS, GALLERY, SCHEDULES } from './data';
-import { Service, Review } from './types';
+import { Service, Review, Schedule, BusinessConfig, SocialLink } from './types';
 
 export default function App() {
   // --- DATABASE COLLECTIONS WITH LOCALSTORAGE PERSISTENCE ---
@@ -55,6 +60,36 @@ export default function App() {
     return saved ? JSON.parse(saved) : SCHEDULES;
   });
 
+  const [businessConfig, setBusinessConfig] = useState<BusinessConfig>(() => {
+    const saved = localStorage.getItem('barbershot_config');
+    if (saved) return JSON.parse(saved);
+    return {
+      name: "Barber Shot",
+      phone: "+57 310 268 1271",
+      phoneFormatted: "3102681271",
+      whatsapp: "+57 310 268 1271",
+      whatsappFormatted: "3102681271",
+      address: "Tarqui, Huila, Colombia",
+      googleMapsEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15951.357123961125!2d-75.92215325!3d2.11283625!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3b1bd49666cbb7%3a0xe0408ca4a9b6d859!2sTarqui%2C%20Huila%2C%20Colombia!5e0!3m2!1ses!2sco!4v1717522000000!5m2!1ses!2sco",
+      googleMapsDirectionsUrl: "https://maps.app.goo.gl/Yj6UpVYozLSAaSxB7",
+      email: "contacto@barbershot.com",
+      logoText: "Barber Shot",
+      attentionDaysText: "Lunes a Sábado: 8:00 AM - 8:30 PM | Domingo: 9:00 AM - 2:00 PM"
+    };
+  });
+
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(() => {
+    const saved = localStorage.getItem('barbershot_socials');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: '1', platform: 'Instagram', url: 'https://instagram.com/barber.shot', active: true },
+      { id: '2', platform: 'Facebook', url: 'https://facebook.com/barbershot', active: true },
+      { id: '3', platform: 'TikTok', url: 'https://tiktok.com/@barbershot', active: true },
+      { id: '4', platform: 'YouTube', url: 'https://youtube.com', active: false },
+      { id: '5', platform: 'WhatsApp', url: 'https://wa.me/573102681271', active: true }
+    ];
+  });
+
   const [appointments, setAppointments] = useState<any[]>(() => {
     const saved = localStorage.getItem('c76_appointments');
     if (saved) return JSON.parse(saved);
@@ -63,7 +98,7 @@ export default function App() {
       {
         id: "app-1",
         clientName: "Alejandro Gómez",
-        clientPhone: "3124567890",
+        clientPhone: "3102681271",
         dateTime: "2026-06-05T10:00",
         services: [SERVICES[0], SERVICES[2]],
         totalPrice: 35000,
@@ -102,7 +137,11 @@ export default function App() {
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
-  const [adminTab, setAdminTab] = useState<'dashboard' | 'appointments' | 'services' | 'reviews' | 'settings'>('dashboard');
+  const [adminTab, setAdminTab] = useState<'dashboard' | 'appointments' | 'services' | 'reviews' | 'settings' | 'general_config' | 'social_links'>('dashboard');
+  
+  // Backoffice Form states for Social Profiles additions
+  const [socialPlatformInput, setSocialPlatformInput] = useState<'Instagram' | 'Facebook' | 'TikTok' | 'YouTube' | 'WhatsApp'>('Instagram');
+  const [socialUrlInput, setSocialUrlInput] = useState('');
 
   // Client user booking flows
   const [showUserBookingModal, setShowUserBookingModal] = useState(false);
@@ -124,12 +163,34 @@ export default function App() {
   }, [schedules]);
 
   useEffect(() => {
+    localStorage.setItem('barbershot_config', JSON.stringify(businessConfig));
+  }, [businessConfig]);
+
+  useEffect(() => {
+    localStorage.setItem('barbershot_socials', JSON.stringify(socialLinks));
+  }, [socialLinks]);
+
+  useEffect(() => {
     localStorage.setItem('c76_appointments', JSON.stringify(appointments));
   }, [appointments]);
 
   useEffect(() => {
     localStorage.setItem('c76_override_status', adminOverrideStatus);
   }, [adminOverrideStatus]);
+
+  // Helper functions for dynamic messaging and profiles
+  const getWhatsappUrl = () => {
+    const configuredWp = socialLinks.find(s => s.platform === 'WhatsApp' && s.active);
+    if (configuredWp?.url) {
+      return configuredWp.url;
+    }
+    return `https://wa.me/${businessConfig.whatsappFormatted}?text=Hola%20${encodeURIComponent(businessConfig.name)}%2C%20me%20gustar%C3%ADa%20reservar%20una%20cita...`;
+  };
+
+  const getSocialUrl = (platform: 'Instagram' | 'Facebook' | 'TikTok' | 'YouTube') => {
+    const found = socialLinks.find(s => s.platform === platform && s.active);
+    return found ? found.url : null;
+  };
 
   // --- FILTERS & INTERFACES ---
   // Filter for services
@@ -324,7 +385,7 @@ export default function App() {
       weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
     });
 
-    const wpBase = `https://wa.me/573219098303?text=Hola%20Barber%20Classic%2076%20Studio%2C%20solicito%20agendamiento%20de%20cita%3A%0A%0A*Mis%20Datos%3A*%0A•%20Nombre%3A%20${encodeURIComponent(bookingClientName)}%0A•%20Contacto%3A%20${encodeURIComponent(bookingClientPhone)}%0A•%20Fecha%2FHora%20Deseada%3A%20${encodeURIComponent(dateFormatted)}%0A%0A*Servicios%20Elegidos%3A*%0A${serviceList}%0A%0A*Total%20Estimado%3A%20${formattedTotal}*%0A%C2%BFCuentan%20con%20agenda%20libre%3F`;
+    const wpBase = `https://wa.me/${businessConfig.whatsappFormatted}?text=Hola%20${encodeURIComponent(businessConfig.name)}%2C%20solicito%20agendamiento%20de%20cita%3A%0A%0A*Mis%20Datos%3A*%0A•%20Nombre%3A%20${encodeURIComponent(bookingClientName)}%0A•%20Contacto%3A%20${encodeURIComponent(bookingClientPhone)}%0A•%20Fecha%2FHora%20Deseada%3A%20${encodeURIComponent(dateFormatted)}%0A%0A*Servicios%20Elegidos%3A*%0A${serviceList}%0A%0A*Total%20Estimado%3A%20${formattedTotal}*%0A%C2%BFCuentan%20con%20agenda%20libre%3F`;
     window.open(wpBase, '_blank');
     
     setShowUserBookingModal(false);
@@ -541,6 +602,26 @@ export default function App() {
                 <Clock className="w-4 h-4" />
                 <span>Ajustes de Horarios</span>
               </button>
+
+              <button 
+                onClick={() => setAdminTab('general_config')}
+                className={`px-4 py-2.5 rounded text-left flex items-center gap-2 whitespace-nowrap lg:w-full transition-all cursor-pointer ${
+                  adminTab === 'general_config' ? 'bg-gold-500 text-stone-950 font-bold' : 'text-stone-300 hover:bg-stone-900/50'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>Configuración General</span>
+              </button>
+
+              <button 
+                onClick={() => setAdminTab('social_links')}
+                className={`px-4 py-2.5 rounded text-left flex items-center gap-2 whitespace-nowrap lg:w-full transition-all cursor-pointer ${
+                  adminTab === 'social_links' ? 'bg-gold-500 text-stone-950 font-bold' : 'text-stone-300 hover:bg-stone-900/50'
+                }`}
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Redes Sociales</span>
+              </button>
             </nav>
 
             <div className="hidden lg:block pt-6 border-t border-stone-900">
@@ -719,7 +800,7 @@ export default function App() {
                         multiple
                         value={newApptServices}
                         onChange={(e) => {
-                          const options = Array.from(e.target.selectedOptions, o => o.value);
+                          const options = Array.from((e.target as HTMLSelectElement).selectedOptions, o => (o as HTMLOptionElement).value);
                           setNewApptServices(options);
                         }}
                         className="w-full bg-stone-950 border border-stone-850 p-2.5 rounded text-stone-100 h-10 overflow-y-auto"
@@ -1171,6 +1252,272 @@ export default function App() {
               </div>
             )}
 
+            {/* TAB: GENERAL_CONFIG */}
+            {adminTab === 'general_config' && (
+              <div className="space-y-6">
+                <div className="border-b border-stone-900 pb-3">
+                  <h2 className="font-serif text-white font-extrabold text-xl sm:text-2xl">Configuración General del Negocio</h2>
+                  <p className="text-xs text-stone-400">Modifica los datos principales de la barbería. Se actualizarán inmediatamente en la web pública.</p>
+                </div>
+
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  alert("¡Configuración general actualizada y guardada con éxito!");
+                }} className="space-y-5 bg-stone-950/60 p-6 rounded-lg border border-stone-900">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Nombre del Negocio</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.name}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, name: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded font-serif focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Texto Logo / Marca</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.logoText}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, logoText: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded font-mono text-gold-400 focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Número de Teléfono Visible</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.phone}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, phone: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Teléfono Formateado (Llamadas, dígitos continuos)</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.phoneFormatted}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, phoneFormatted: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded font-mono focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Número de WhatsApp (con indicativo, ej: +57 310 268 1271)</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.whatsapp}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, whatsapp: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">WhatsApp Formateado (Para links, ej: 3102681271 ó 573102681271)</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.whatsappFormatted}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, whatsappFormatted: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded font-mono focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Dirección Física Completa</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.address}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, address: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Enlace Directo de Google Maps (Cómo llegar)</label>
+                      <input 
+                        type="url" 
+                        value={businessConfig.googleMapsDirectionsUrl}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, googleMapsDirectionsUrl: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-xs p-3 rounded font-mono text-stone-300 focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">URL del Mapa Embed (Iframe src de Google Maps)</label>
+                      <textarea 
+                        value={businessConfig.googleMapsEmbedUrl}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, googleMapsEmbedUrl: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-xs p-3 rounded font-mono text-stone-400 focus:border-gold-500 focus:outline-none h-24"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Correo Electrónico Oficial</label>
+                      <input 
+                        type="email" 
+                        value={businessConfig.email}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, email: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Texto Resumen Horarios (ej: Lunes a Sábado: 8:00 AM - 8:30 PM)</label>
+                      <input 
+                        type="text" 
+                        value={businessConfig.attentionDaysText}
+                        onChange={(e) => setBusinessConfig({ ...businessConfig, attentionDaysText: e.target.value })}
+                        className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded focus:border-gold-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <button 
+                      type="submit"
+                      className="bg-gold-500 hover:bg-gold-400 text-stone-950 font-serif font-bold uppercase py-3 px-6 rounded text-xs tracking-wider transition cursor-pointer font-extrabold"
+                    >
+                      Guardar Cambios
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* TAB: SOCIAL_LINKS */}
+            {adminTab === 'social_links' && (
+              <div className="space-y-6">
+                <div className="border-b border-stone-900 pb-3">
+                  <h2 className="font-serif text-white font-extrabold text-xl sm:text-2xl">Administrar Redes Sociales</h2>
+                  <p className="text-xs text-stone-400">Configura los enlaces correspondientes con iconos modernos que se muestran en el sitio web.</p>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                  {/* Left: Social List */}
+                  <div className="xl:col-span-7 space-y-4">
+                    <h4 className="font-serif font-bold text-xs uppercase tracking-wider text-white">Redes Configuradas</h4>
+                    {socialLinks.length === 0 ? (
+                      <div className="p-8 text-center border border-stone-900 rounded bg-stone-950/20 text-stone-500 text-xs">
+                        No hay ninguna red social configurada. Agrega una a la derecha.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {socialLinks.map(link => (
+                          <div key={link.id} className="bg-stone-950/60 p-4 rounded-lg border border-stone-900 flex items-center justify-between gap-4">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <span className={`w-2.5 h-2.5 rounded-full ${link.active ? 'bg-emerald-500 animate-pulse' : 'bg-stone-650'}`} />
+                              <div>
+                                <span className="text-xs font-mono font-bold bg-stone-900 text-gold-400 px-2.5 py-0.5 rounded uppercase">{link.platform}</span>
+                                <p className="text-stone-350 text-xs font-mono truncate mt-1.5 max-w-[200px] sm:max-w-xs">{link.url}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 shrink-0">
+                              <button 
+                                onClick={() => {
+                                  setSocialLinks(socialLinks.map(s => s.id === link.id ? { ...s, active: !s.active } : s));
+                                }}
+                                className={`text-[10px] px-2.5 py-1 rounded border cursor-pointer font-semibold transition ${
+                                  link.active 
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' 
+                                    : 'bg-stone-900 border-stone-800 text-stone-400 hover:bg-stone-850 hover:text-white'
+                                }`}
+                              >
+                                {link.active ? 'Activo' : 'Inactivo'}
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if (confirm(`¿Estás seguro de eliminar la red ${link.platform}?`)) {
+                                    setSocialLinks(socialLinks.filter(s => s.id !== link.id));
+                                  }
+                                }}
+                                className="p-1.5 bg-stone-900 hover:bg-rose-600/20 text-stone-400 hover:text-rose-400 border border-stone-800 hover:border-rose-500/30 rounded cursor-pointer transition"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Quick Add Form */}
+                  <div className="xl:col-span-5 bg-stone-950/60 p-5 rounded-lg border border-stone-900 h-fit space-y-4">
+                    <h4 className="font-serif font-bold text-xs uppercase tracking-wider text-white">Agregar / Modificar Enlace</h4>
+                    <form onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!socialUrlInput.trim()) return;
+                      
+                      const existingIndex = socialLinks.findIndex(s => s.platform.toLowerCase() === socialPlatformInput.toLowerCase());
+                      if (existingIndex > -1) {
+                        setSocialLinks(socialLinks.map((s, i) => i === existingIndex ? { ...s, url: socialUrlInput, active: true } : s));
+                        alert(`¡Enlace de ${socialPlatformInput} actualizado con éxito!`);
+                      } else {
+                        const newLink: SocialLink = {
+                          id: "soc-" + Date.now(),
+                          platform: socialPlatformInput,
+                          url: socialUrlInput,
+                          active: true
+                        };
+                        setSocialLinks([...socialLinks, newLink]);
+                        alert(`¡Enlace de ${socialPlatformInput} añadido con éxito!`);
+                      }
+                      setSocialUrlInput('');
+                    }} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">Plataforma</label>
+                        <select 
+                          value={socialPlatformInput}
+                          onChange={(e) => setSocialPlatformInput(e.target.value as any)}
+                          className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded text-stone-300 focus:border-gold-500 focus:outline-none"
+                        >
+                          <option value="Instagram">Instagram</option>
+                          <option value="Facebook">Facebook</option>
+                          <option value="TikTok">TikTok</option>
+                          <option value="YouTube">YouTube</option>
+                          <option value="WhatsApp">WhatsApp</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-mono text-stone-400 uppercase tracking-wider mb-2">URL del Link Profile</label>
+                        <input 
+                          type="url" 
+                          placeholder="https://..."
+                          value={socialUrlInput}
+                          onChange={(e) => setSocialUrlInput(e.target.value)}
+                          className="w-full bg-stone-900 border border-stone-800 text-sm p-3 rounded font-mono text-stone-300 focus:border-gold-500 focus:outline-none"
+                          required
+                        />
+                      </div>
+
+                      <button 
+                        type="submit"
+                        className="w-full bg-gold-500 hover:bg-gold-400 text-stone-950 font-serif font-bold uppercase py-2.5 rounded text-xs tracking-wider transition cursor-pointer font-extrabold"
+                      >
+                        Establecer Enlace
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </main>
         </div>
       </div>
@@ -1189,14 +1536,16 @@ export default function App() {
             <a href="#inicio" className="flex items-center space-x-3 group" id="nav-logo">
               <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-stone-900 to-black border border-gold-500/50 group-hover:border-gold-500 transition-colors duration-300">
                 <Scissors className="w-6 h-6 text-gold-500" />
-                <span className="absolute -bottom-1 text-[8px] tracking-widest bg-stone-950 px-1 border border-gold-500/20 text-gold-400 font-serif font-bold">76</span>
+                <span className="absolute -bottom-1 text-[8px] tracking-widest bg-stone-950 px-1 border border-gold-500/20 text-gold-400 font-serif font-bold">
+                  {businessConfig.name ? businessConfig.name.substring(0, 2).toUpperCase() : 'BS'}
+                </span>
               </div>
               <div className="flex flex-col">
-                <span className="font-serif font-bold text-lg tracking-wider text-white group-hover:text-gold-500 transition-colors duration-300">
-                  BARBER CLASSIC 76
+                <span className="font-serif font-bold text-lg tracking-wider text-white group-hover:text-gold-500 transition-colors duration-300 uppercase">
+                  {businessConfig.name}
                 </span>
                 <span className="font-mono text-[9px] uppercase tracking-widest text-stone-400">
-                  Studio • Garzón, Huila
+                  {businessConfig.logoText} • {businessConfig.address.split(',')[0]}
                 </span>
               </div>
             </a>
@@ -1240,7 +1589,7 @@ export default function App() {
               </button>
 
               <a 
-                href={CONTACT_INFO.whatsappMessageUrl}
+                href={getWhatsappUrl()}
                 target="_blank"
                 rel="noreferrer"
                 className="bg-gold-500 text-stone-950 font-serif font-bold text-xs tracking-wider uppercase px-4 py-2.5 rounded hover:bg-gold-400 active:scale-95 transition-all duration-200 border border-gold-400/20 flex items-center gap-1.5 shadow-lg shadow-gold-500/10"
@@ -1356,7 +1705,7 @@ export default function App() {
                     )}
                   </button>
                   <a 
-                    href={CONTACT_INFO.whatsappMessageUrl}
+                    href={getWhatsappUrl()}
                     target="_blank"
                     rel="noreferrer"
                     className="w-full bg-gold-500 text-stone-950 py-3 rounded font-serif font-bold text-center block tracking-wider uppercase text-sm hover:bg-gold-400 transition"
@@ -1427,7 +1776,7 @@ export default function App() {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="md:max-w-2xl mx-auto text-stone-300 mt-6 text-sm sm:text-lg lg:text-xl font-light leading-relaxed font-sans"
           >
-            La mejor barbería en Garzón, Huila. Experimenta cortes prémium hechos con absoluta precisión por manos expertas, bajo estrictas normas de higiene y en el mejor ambiente.
+            La mejor barbería en {businessConfig.address.split(',')[0]}. Experimenta cortes prémium hechos con absoluta precisión por manos expertas, bajo estrictas normas de higiene y en el mejor ambiente.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -1438,7 +1787,7 @@ export default function App() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 md:mt-12"
           >
             <a 
-              href={CONTACT_INFO.whatsappMessageUrl}
+              href={getWhatsappUrl()}
               target="_blank"
               rel="noreferrer"
               className="w-full sm:w-auto bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-stone-950 font-serif font-extrabold tracking-widest uppercase text-xs sm:text-sm px-8 py-4 sm:py-4.5 rounded shadow-xl shadow-gold-500/20 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 border border-gold-400"
@@ -1449,7 +1798,7 @@ export default function App() {
             </a>
             
             <a 
-              href={CONTACT_INFO.googleMapsDirectionsUrl}
+              href={businessConfig.googleMapsDirectionsUrl}
               target="_blank"
               rel="noreferrer"
               className="w-full sm:w-auto bg-stone-900/90 hover:bg-stone-800 text-white font-medium text-xs sm:text-sm px-8 py-4 sm:py-4.5 rounded border border-stone-800 hover:border-gold-500/50 transition-all duration-200 flex items-center justify-center gap-2"
@@ -1518,14 +1867,14 @@ export default function App() {
                   {colombiaStatus.text}
                 </p>
                 <p className="text-[10px] text-stone-400">
-                  Ubicación física: {CONTACT_INFO.address}
+                  Ubicación física: {businessConfig.address}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-stone-400 text-xs">¿Prefieres reservar una hora específica?</span>
               <a 
-                href={CONTACT_INFO.whatsappMessageUrl} 
+                href={getWhatsappUrl()} 
                 target="_blank" 
                 rel="noreferrer"
                 className="text-gold-500 hover:text-white transition-colors duration-150 inline-flex items-center font-serif text-xs font-bold gap-1 uppercase"
@@ -1780,7 +2129,7 @@ export default function App() {
               {selectedServices.length === 0 && (
                 <div className="mt-4">
                   <a
-                    href={CONTACT_INFO.whatsappMessageUrl}
+                    href={getWhatsappUrl()}
                     target="_blank"
                     rel="noreferrer"
                     className="w-full bg-stone-950 text-stone-200 border border-stone-800 hover:border-gold-500 hover:text-white font-serif font-bold text-xs uppercase tracking-widest text-center block py-3.5 rounded transition duration-200"
@@ -1921,7 +2270,7 @@ export default function App() {
                 </div>
                 
                 <a 
-                  href={CONTACT_INFO.whatsappMessageUrl}
+                  href={getWhatsappUrl()}
                   target="_blank"
                   rel="noreferrer"
                   className="bg-transparent hover:bg-stone-900 border border-gold-500 text-gold-500 hover:text-white px-5 py-2.5 rounded font-serif font-bold text-xs uppercase tracking-wider transition-all duration-200 block text-center w-full sm:w-auto"
@@ -2241,14 +2590,14 @@ export default function App() {
               </h2>
               
               <p className="text-stone-400 mt-4 text-xs sm:text-sm font-light leading-relaxed">
-                Estamos ubicados en una zona central y de fácil acceso con parqueadero aledaño en Garzón. Ven a relajarte mientras cuidamos tu imagen con profesionalismo óptimo.
+                Estamos ubicados en una zona central y de fácil acceso con parqueadero aledaño en {businessConfig.address.split(',')[0]}. Ven a relajarte mientras cuidamos tu imagen con profesionalismo óptimo.
               </p>
             </div>
 
             {/* Quick Contact info boxes */}
             <div className="space-y-4">
               <a 
-                href={CONTACT_INFO.googleMapsDirectionsUrl}
+                href={businessConfig.googleMapsDirectionsUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-start space-x-4 p-4 rounded bg-stone-900/30 border border-stone-900 hover:border-gold-500/30 transition-all duration-200 group"
@@ -2259,7 +2608,7 @@ export default function App() {
                 </div>
                 <div>
                   <span className="block text-[10px] text-stone-500 font-mono tracking-wider uppercase">Nuestra Dirección</span>
-                  <span className="block font-serif text-white font-bold text-sm tracking-wide mt-0.5">{CONTACT_INFO.address}</span>
+                  <span className="block font-serif text-white font-bold text-sm tracking-wide mt-0.5">{businessConfig.address}</span>
                   <span className="text-gold-500 text-xs mt-1 inline-flex items-center gap-1">
                     <span>Ver indicaciones en mapa</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -2268,7 +2617,7 @@ export default function App() {
               </a>
 
               <a 
-                href={`tel:${CONTACT_INFO.phoneFormatted}`}
+                href={`tel:${businessConfig.phoneFormatted}`}
                 className="flex items-start space-x-4 p-4 rounded bg-stone-900/30 border border-stone-900 hover:border-gold-500/30 transition-all duration-200 group"
                 id="contact-phone-link"
               >
@@ -2277,7 +2626,7 @@ export default function App() {
                 </div>
                 <div>
                   <span className="block text-[10px] text-stone-500 font-mono tracking-wider uppercase">Llámanos de inmediato</span>
-                  <span className="block font-serif text-white font-bold text-sm tracking-wide mt-0.5">{CONTACT_INFO.phone}</span>
+                  <span className="block font-serif text-white font-bold text-sm tracking-wide mt-0.5">{businessConfig.phone}</span>
                   <span className="text-gold-500 text-xs mt-1 inline-flex items-center gap-1">
                     <span>Hacer llamada telefónica</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -2328,14 +2677,14 @@ export default function App() {
               <div className="flex-1 rounded overflow-hidden relative border border-stone-800">
                 {/* Embed Map */}
                 <iframe 
-                  src={CONTACT_INFO.googleMapsEmbedUrl} 
+                  src={businessConfig.googleMapsEmbedUrl} 
                   width="100%" 
-                  height="100%" 
+                  height="105%" 
                   style={{ border: 0 }} 
                   allowFullScreen={true}
                   loading="lazy" 
                   referrerPolicy="no-referrer"
-                  title="Google Maps Location Barber Classic 76 Studio"
+                  title={`Google Maps Location ${businessConfig.name}`}
                   className="absolute inset-0 grayscale contrast-[1.1] brightness-[0.8]"
                 />
               </div>
@@ -2343,11 +2692,11 @@ export default function App() {
               <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-stone-900">
                 <div className="flex items-center space-x-2 text-stone-300">
                   <Map className="w-4.5 h-4.5 text-gold-500 shrink-0" />
-                  <span className="font-mono text-stone-400 text-[11px]">Cra. 7 FRENTE al #6-04, Garzón Huila</span>
+                  <span className="font-mono text-stone-400 text-[11px]">{businessConfig.address}</span>
                 </div>
                 
                 <a 
-                  href={CONTACT_INFO.googleMapsDirectionsUrl}
+                  href={businessConfig.googleMapsDirectionsUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="bg-stone-950 border border-gold-500/45 hover:border-gold-500 text-gold-400 hover:text-white px-4 py-2 rounded font-serif font-bold text-xs uppercase tracking-wider transition-all duration-150 inline-flex items-center justify-center gap-1.5 cursor-pointer"
@@ -2391,7 +2740,7 @@ export default function App() {
               <div className="flex items-center space-x-2 border-b border-stone-800 pb-2 mb-2">
                 <Scissors className="w-4 h-4 text-gold-500 animate-spin" />
                 <span className="font-serif text-white font-bold text-xs tracking-wider uppercase">
-                  Studio Barbería 76
+                  {businessConfig.name}
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-auto" />
               </div>
@@ -2402,7 +2751,7 @@ export default function App() {
 
               <div className="mt-3 flex justify-end">
                 <a 
-                  href={CONTACT_INFO.whatsappMessageUrl}
+                  href={getWhatsappUrl()}
                   target="_blank"
                   rel="noreferrer"
                   onClick={() => setShowWpTooltip(false)}
@@ -2423,7 +2772,7 @@ export default function App() {
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-20 pointer-events-none" />
           
           <a 
-            href={CONTACT_INFO.whatsappMessageUrl}
+            href={getWhatsappUrl()}
             target="_blank"
             rel="noreferrer"
             onClick={() => setShowWpTooltip(!showWpTooltip)}
@@ -2458,7 +2807,7 @@ export default function App() {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-serif font-extrabold text-white text-base tracking-widest uppercase">
-                    BARBER CLASSIC 76
+                    {businessConfig.name}
                   </span>
                   <span className="font-mono text-[9px] uppercase tracking-widest text-gold-500/80">
                     Estilo & Tradición Masculina
@@ -2467,16 +2816,40 @@ export default function App() {
               </div>
 
               <p className="text-stone-400 text-xs leading-relaxed font-light">
-                Premium Barbería dedicada a esculpir y mantener la imagen de caballeros exigentes en Garzón, Huila. Ofrecemos tratamientos exclusivos de cabello y acondicionamiento de barba simétrico bajo las máximas normativas de bioseguridad garantizadas.
+                Premium Barbería dedicada a esculpir y mantener la imagen de caballeros exigentes en {businessConfig.address}. Ofrecemos tratamientos exclusivos de cabello y acondicionamiento de barba simétrico bajo las máximas normativas de bioseguridad garantizadas.
               </p>
 
-              <div className="flex items-center gap-1 text-gold-500">
+              {/* Modern active social icons */}
+              <div className="flex items-center space-x-3 pt-2">
+                {socialLinks.filter(s => s.active).map(link => {
+                  let IconComponent = Share2;
+                  if (link.platform === 'Instagram') IconComponent = Instagram;
+                  else if (link.platform === 'Facebook') IconComponent = Facebook;
+                  else if (link.platform === 'YouTube') IconComponent = Youtube;
+                  else if (link.platform === 'WhatsApp') IconComponent = MessageSquare;
+                  
+                  return (
+                    <a 
+                      key={link.id} 
+                      href={link.url} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="w-8 h-8 rounded-full bg-stone-900 border border-stone-800 text-stone-400 hover:text-gold-500 hover:border-gold-500 flex items-center justify-center transition"
+                      title={link.platform}
+                    >
+                      <IconComponent className="w-4.5 h-4.5" />
+                    </a>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-1 text-gold-500 pt-1">
                 <Star className="w-4 h-4 fill-current" />
                 <Star className="w-4 h-4 fill-current" />
                 <Star className="w-4 h-4 fill-current" />
                 <Star className="w-4 h-4 fill-current" />
                 <Star className="w-4 h-4 fill-current" />
-                <span className="font-mono text-xs text-stone-300 ml-1">5.0 de Calificación unánime de nuestra clientela local.</span>
+                <span className="font-mono text-xs text-stone-300 ml-1">5.0 de Calificación de nuestra clientela local.</span>
               </div>
             </div>
 
@@ -2497,16 +2870,15 @@ export default function App() {
             <div className="md:col-span-4 space-y-3">
               <h4 className="font-serif text-white text-xs tracking-wider uppercase font-extrabold">Localización & Contacto</h4>
               <p className="text-stone-400 text-xs">
-                Barber Classic 76 Studio, Garzón<br />
-                Dirección Oficial: {CONTACT_INFO.address}<br />
-                Departamento del Huila, Colombia.<br />
-                Teléfono Directo: <a href={`tel:${CONTACT_INFO.phoneFormatted}`} className="text-gold-400 underline">{CONTACT_INFO.phone}</a>
+                {businessConfig.name}, {businessConfig.address.split(',')[0]}<br />
+                Dirección Oficial: {businessConfig.address}<br />
+                Teléfono Directo: <a href={`tel:${businessConfig.phoneFormatted}`} className="text-gold-400 underline">{businessConfig.phone}</a>
               </p>
 
               <div className="bg-stone-900 p-3 rounded border border-stone-850">
                 <span className="block text-[10px] text-stone-400 font-serif font-bold uppercase tracking-wider">Ubicación Estratégica</span>
                 <span className="block text-[10px] text-stone-500 font-mono mt-1">
-                  Encuéntranos en Garzón, Huila sobre la Carrera Septima al lado de los mejores establecimientos del municipio.
+                  Encuéntranos en {businessConfig.address} al lado de los mejores establecimientos de la zona.
                 </span>
               </div>
             </div>
@@ -2516,10 +2888,10 @@ export default function App() {
           {/* Lower segment copyrights */}
           <div className="pt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-stone-500 text-[10px] font-mono">
             <div>
-              &copy; {new Date().getFullYear()} Barber Classic 76 Studio. Todos los derechos reservados.
+              &copy; {new Date().getFullYear()} {businessConfig.name}. Todos los derechos reservados.
             </div>
             <div>
-              Diseño de Alta Conversión • <span className="text-gold-500/80">Estilo Masculino Moderno</span> • Garzón, Huila, Colombia.
+              Diseño de Alta Conversión • <span className="text-gold-500/80">Estilo Masculino Moderno</span> • {businessConfig.address}.
             </div>
           </div>
 
@@ -2550,7 +2922,7 @@ export default function App() {
               <div className="flex justify-between items-center border-b border-stone-850 pb-3">
                 <div>
                   <h3 className="font-serif font-extrabold text-white text-base tracking-wide uppercase">Detalles de la Reserva</h3>
-                  <p className="text-[10px] text-gold-500/80 font-mono tracking-widest uppercase">Classic 76 Studio, Garzón</p>
+                  <p className="text-[10px] text-gold-500/80 font-mono tracking-widest uppercase">{businessConfig.name}, {businessConfig.address.split(',')[0]}</p>
                 </div>
                 <button 
                   onClick={() => setShowUserBookingModal(false)}
@@ -2668,7 +3040,7 @@ export default function App() {
 
               <div>
                 <h3 className="font-serif font-extrabold text-white text-sm tracking-widest uppercase">ACCESO CRÍTICO DEL CRM</h3>
-                <p className="text-[10px] text-gold-400 font-mono tracking-wider mt-0.5">Classic 76 Studio, Garzón Huila</p>
+                <p className="text-[10px] text-gold-400 font-mono tracking-wider mt-0.5">{businessConfig.name} • {businessConfig.address.split(',')[0]} {businessConfig.address.split(',')[1] || ''}</p>
               </div>
 
               <div className="text-xs text-stone-400 leading-relaxed font-light">

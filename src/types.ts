@@ -56,3 +56,25 @@ export interface ContactInfo {
   googleMapsEmbedUrl: string;
   googleMapsDirectionsUrl: string;
 }
+
+export interface BusinessConfig {
+  name: string;
+  phone: string;
+  phoneFormatted: string;
+  whatsapp: string;
+  whatsappFormatted: string;
+  address: string;
+  googleMapsEmbedUrl: string;
+  googleMapsDirectionsUrl: string;
+  email: string;
+  logoUrl?: string;
+  logoText: string;
+  attentionDaysText: string;
+}
+
+export interface SocialLink {
+  id: string; // unique ID
+  platform: 'Instagram' | 'Facebook' | 'TikTok' | 'YouTube' | 'WhatsApp';
+  url: string;
+  active: boolean;
+}
